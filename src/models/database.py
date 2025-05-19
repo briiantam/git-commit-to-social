@@ -22,7 +22,8 @@ def initialize_db():
         files_changed TEXT NOT NULL,
         insertions INTEGER NOT NULL,
         deletions INTEGER NOT NULL,
-        is_summarized INTEGER DEFAULT 0
+        is_summarized INTEGER DEFAULT 0,
+        diff_content TEXT
     )
     ''')
     
@@ -41,7 +42,7 @@ def initialize_db():
     conn.close()
     logging.info("Database initialized successfully")
 
-def store_commit(commit_id, author, message, timestamp, files_changed, insertions, deletions):
+def store_commit(commit_id, author, message, timestamp, files_changed, insertions, deletions, diff_content=""):
     """Store a commit in the database."""
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
@@ -50,9 +51,9 @@ def store_commit(commit_id, author, message, timestamp, files_changed, insertion
     
     try:
         cursor.execute('''
-        INSERT INTO commits (id, author, message, timestamp, files_changed, insertions, deletions)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (commit_id, author, message, timestamp, files_changed_json, insertions, deletions))
+        INSERT INTO commits (id, author, message, timestamp, files_changed, insertions, deletions, diff_content)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (commit_id, author, message, timestamp, files_changed_json, insertions, deletions, diff_content))
         conn.commit()
         logging.info(f"Commit {commit_id[:7]} stored successfully")
     except sqlite3.IntegrityError:
@@ -87,7 +88,8 @@ def get_todays_commits():
             "files_changed": files_changed,
             "insertions": commit[5],
             "deletions": commit[6],
-            "is_summarized": bool(commit[7])
+            "is_summarized": bool(commit[7]),
+            "diff_content": commit[8] if len(commit) > 8 else ""
         })
     
     conn.close()
@@ -148,3 +150,18 @@ def mark_commits_as_summarized(commit_ids):
     conn.close()
     
     logging.info(f"Marked {len(commit_ids)} commits as summarized")
+
+def commit_exists(commit_id):
+    """Check if a commit exists in the database."""
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT 1 FROM commits WHERE id = ?", (commit_id,))
+        result = cursor.fetchone() is not None
+        
+        conn.close()
+        return result
+    except Exception as e:
+        logging.error(f"Failed to check if commit {commit_id} exists: {str(e)}")
+        return False

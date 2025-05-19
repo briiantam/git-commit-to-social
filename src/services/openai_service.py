@@ -14,9 +14,9 @@ class OpenAIService:
     
     @retry(max_retries=MAX_RETRIES, delay=RETRY_DELAY)
     def summarize_commits(self, commits):
-        """Summarize a list of commits using OpenAI GPT-mini model."""
+        """Summarize a list of commits using OpenAI GPT-4o-mini model."""
         if not commits:
-            return "No commits were made today."
+            return "no commits were made today. the void stares back. silence."
         
         commits_info = []
         for commit in commits:
@@ -27,30 +27,33 @@ class OpenAIService:
                 f"Files changed: {', '.join(commit['files_changed'][:5])}"
                 f"{' and more' if len(commit['files_changed']) > 5 else ''}\n"
                 f"Stats: +{commit['insertions']}, -{commit['deletions']}\n"
+                f"Diff: {commit.get('diff_content', 'No diff available')[:1000]}\n"
             )
             commits_info.append(commit_info)
         
         commits_text = "\n".join(commits_info)
         
         prompt = (
-            "Below are the commits made to a repository today. "
-            "Please provide a concise, engaging summary of these commits, "
-            "focusing on the key changes, new features, or improvements. "
-            "Use 1-2 paragraphs, suitable for posting on X (Twitter).\n\n"
+            "below are the commits made to a repository today. "
+            "analyze these changes and provide a detailed summary of what actually changed and its impact. "
+            "write as if you are steve jobs on lsd and crack - eccentric, intense, lowercase only, no emojis, "
+            "totally unhinged but deeply insightful about technology. "
+            "focus on the actual code changes and what they mean for the project. "
+            "use 1-2 paragraphs, suitable for a brief social media post.\n\n"
             f"{commits_text}"
         )
         
         try:
             response = self.client.chat.completions.create(
-                model="gpt-mini",  # Using GPT-mini as specified
+                model="gpt-4o-mini",  # Using GPT-4o-mini as specified
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant that summarizes code changes."},
+                    {"role": "system", "content": "you are steve jobs on lsd and crack. you write in lowercase only, no emojis, intense and eccentric but insightful about technology."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=280  # Twitter's character limit
+                max_tokens=500  # Increased for more detailed content
             )
             
-            summary = response.choices[0].message.content.strip()
+            summary = response.choices[0].message.content.strip().lower()  # Ensure lowercase
             logging.info("Successfully generated commit summary")
             return summary
         except Exception as e:
