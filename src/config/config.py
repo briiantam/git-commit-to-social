@@ -8,10 +8,7 @@ load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-X_API_KEY = os.getenv("X_API_KEY")
-X_API_SECRET = os.getenv("X_API_SECRET")
-X_ACCESS_TOKEN = os.getenv("X_ACCESS_TOKEN")
-X_ACCESS_TOKEN_SECRET = os.getenv("X_ACCESS_TOKEN_SECRET")
+OUTPUT_DIR = os.getenv("OUTPUT_DIR", os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "output"))
 
 REPO_PATH = os.getenv("REPO_PATH", "/home/ubuntu/repos/barebone-ai-app")
 

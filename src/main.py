@@ -14,29 +14,29 @@ from src.utils.scheduler import Scheduler
 from src.models.database import initialize_db, get_todays_commits, store_summary, mark_summary_as_posted, mark_commits_as_summarized
 from src.services.git_service import GitService
 from src.services.openai_service import OpenAIService
-from src.services.twitter_service import TwitterService
+from src.services.file_service import FileService
 
 setup_logging()
 
 git_service = None
 openai_service = None
-twitter_service = None
+file_service = None
 scheduler = None
 
 def initialize_services():
     """Initialize all services."""
-    global git_service, openai_service, twitter_service, scheduler
+    global git_service, openai_service, file_service, scheduler
     
     initialize_db()
     
     git_service = GitService()
     openai_service = OpenAIService()
-    twitter_service = TwitterService()
+    file_service = FileService()
     
     scheduler = Scheduler()
 
 def generate_and_post_summary():
-    """Generate a summary of today's commits and post it to X."""
+    """Generate a summary of today's commits and save it locally."""
     try:
         logging.info("Starting daily summary generation")
         
@@ -54,15 +54,15 @@ def generate_and_post_summary():
         
         summary_id = store_summary(today, summary, len(commits))
         
-        tweet_text = f"Daily commit summary ({today}):\n\n{summary}"
-        twitter_service.post_tweet(tweet_text)
+        post_text = f"Daily commit summary ({today}):\n\n{summary}"
+        filepath = file_service.save_post(post_text)
         
         mark_summary_as_posted(summary_id)
         mark_commits_as_summarized([commit["id"] for commit in commits])
         
-        logging.info("Daily summary generated and posted successfully")
+        logging.info(f"Daily summary generated and saved successfully to {filepath}")
     except Exception as e:
-        logging.error(f"Failed to generate and post summary: {str(e)}")
+        logging.error(f"Failed to generate and save summary: {str(e)}")
 
 def monitor_commits():
     """Monitor for new commits and process them."""
