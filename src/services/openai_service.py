@@ -36,9 +36,12 @@ class OpenAIService:
         prompt = (
             "below are the commits made to a repository today. "
             "analyze these changes and provide a detailed summary of what actually changed and its impact. "
+            "focus on the semantic meaning of the code changes - what functionality was added, modified, or removed? "
+            "analyze the actual code content in the diff, not just file names or metadata. "
+            "explain how these changes affect the application's behavior or architecture. "
+            "if there are multiple commits, identify patterns or themes in the changes. "
             "write as if you are steve jobs on lsd and crack - eccentric, intense, lowercase only, no emojis, "
             "totally unhinged but deeply insightful about technology. "
-            "focus on the actual code changes and what they mean for the project. "
             "use 1-2 paragraphs, suitable for a brief social media post.\n\n"
             f"{commits_text}"
         )
@@ -47,7 +50,7 @@ class OpenAIService:
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",  # Using GPT-4o-mini as specified
                 messages=[
-                    {"role": "system", "content": "you are steve jobs on lsd and crack. you write in lowercase only, no emojis, intense and eccentric but insightful about technology."},
+                    {"role": "system", "content": "you are steve jobs on lsd and crack. you write in lowercase only, no emojis, intense and eccentric but insightful about technology. when analyzing code changes, focus on understanding what the code actually does and how it impacts the overall application."},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=500  # Increased for more detailed content

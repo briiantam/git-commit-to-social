@@ -72,12 +72,106 @@ class GitService:
                 diff_summary = f"File: {diff_item.a_path}\n"
                 diff_summary += f"Change type: {diff_item.change_type}\n"
                 
-                if diff_item.a_blob and diff_item.b_blob:
-                    diff_content = str(diff_item.diff)
-                    if len(diff_content) > 500:
-                        diff_content = diff_content[:500] + "...[truncated]"
-                    diff_summary += f"Changes:\n{diff_content}\n"
-                    
+                if diff_item.change_type == 'R':
+                    diff_summary += f"Renamed to: {diff_item.b_path}\n"
+                
+                if diff_item.change_type in ['A', 'M', 'R']:
+                    if diff_item.b_blob:
+                        # Get the raw diff content
+                        try:
+                            if hasattr(diff_item, 'diff'):
+                                diff_content = diff_item.diff
+                                if isinstance(diff_content, bytes):
+                                    diff_text = diff_content.decode('utf-8', errors='replace')
+                                else:
+                                    diff_text = str(diff_content)
+                            else:
+                                a_blob = diff_item.a_blob.data_stream.read().decode('utf-8', errors='replace') if diff_item.a_blob else ""
+                                b_blob = diff_item.b_blob.data_stream.read().decode('utf-8', errors='replace') if diff_item.b_blob else ""
+                                
+                                if diff_item.change_type == 'A':
+                                    diff_text = f"+++ {diff_item.b_path}\n{b_blob}"
+                                elif diff_item.change_type == 'M':
+                                    diff_text = f"--- {diff_item.a_path}\n+++ {diff_item.b_path}\n"
+                                    a_lines = a_blob.split('\n')
+                                    b_lines = b_blob.split('\n')
+                                    
+                                    diff_text += f"First 20 lines of original file:\n{a_blob.split('\n')[:20]}\n"
+                                    diff_text += f"First 20 lines of modified file:\n{b_blob.split('\n')[:20]}\n"
+                                else:
+                                    diff_text = f"--- {diff_item.a_path}\n+++ {diff_item.b_path}\n"
+                            
+                            lines = diff_text.split('\n')
+                            added_lines = []
+                            deleted_lines = []
+                            context_lines = []
+                            
+                            for line in lines:
+                                if line.startswith('+') and not line.startswith('+++'):
+                                    added_lines.append(line[1:])
+                                elif line.startswith('-') and not line.startswith('---'):
+                                    deleted_lines.append(line[1:])
+                                elif not line.startswith('@@') and not line.startswith('diff') and not line.startswith('index'):
+                                    context_lines.append(line)
+                            
+                            if deleted_lines:
+                                diff_summary += "\nCode removed:\n```\n"
+                                diff_summary += "\n".join(deleted_lines[:20])  # Limit to 20 lines
+                                if len(deleted_lines) > 20:
+                                    diff_summary += "\n... (more lines omitted)"
+                                diff_summary += "\n```\n"
+                            
+                            if added_lines:
+                                diff_summary += "\nCode added:\n```\n"
+                                diff_summary += "\n".join(added_lines[:20])  # Limit to 20 lines
+                                if len(added_lines) > 20:
+                                    diff_summary += "\n... (more lines omitted)"
+                                diff_summary += "\n```\n"
+                            
+                            if context_lines and len(context_lines) > 2:
+                                diff_summary += "\nContext:\n```\n"
+                                diff_summary += "\n".join(context_lines[:5])  # Limit to 5 lines
+                                if len(context_lines) > 5:
+                                    diff_summary += "\n... (more lines omitted)"
+                                diff_summary += "\n```\n"
+                                
+                            if not (added_lines or deleted_lines) and diff_item.b_blob:
+                                diff_summary += "\nFile content (first 20 lines):\n```\n"
+                                content = diff_item.b_blob.data_stream.read().decode('utf-8', errors='replace')
+                                content_lines = content.split('\n')[:20]
+                                diff_summary += "\n".join(content_lines)
+                                if len(content.split('\n')) > 20:
+                                    diff_summary += "\n... (more lines omitted)"
+                                diff_summary += "\n```\n"
+                                
+                        except Exception as inner_e:
+                            logging.warning(f"Error parsing diff for {diff_item.a_path}: {str(inner_e)}")
+                            if diff_item.b_blob:
+                                diff_summary += "\nFile content (first 20 lines):\n```\n"
+                                try:
+                                    content = diff_item.b_blob.data_stream.read().decode('utf-8', errors='replace')
+                                    content_lines = content.split('\n')[:20]
+                                    diff_summary += "\n".join(content_lines)
+                                    if len(content.split('\n')) > 20:
+                                        diff_summary += "\n... (more lines omitted)"
+                                except Exception as content_e:
+                                    diff_summary += f"Error reading file content: {str(content_e)}"
+                                diff_summary += "\n```\n"
+                
+                elif diff_item.change_type == 'D':
+                    diff_summary += "\nEntire file was deleted\n"
+                    if diff_item.a_blob:
+                        try:
+                            content = diff_item.a_blob.data_stream.read().decode('utf-8', errors='replace')
+                            diff_summary += "Content summary (first 10 lines):\n```\n"
+                            content_lines = content.split('\n')[:10]
+                            diff_summary += "\n".join(content_lines)
+                            if len(content.split('\n')) > 10:
+                                diff_summary += "\n... (more lines omitted)"
+                        except Exception as content_e:
+                            diff_summary += f"Error reading file content: {str(content_e)}"
+                        diff_summary += "\n```\n"
+                
                 diff_summaries.append(diff_summary)
             
             return "\n---\n".join(diff_summaries)
