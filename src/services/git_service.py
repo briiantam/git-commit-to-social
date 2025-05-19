@@ -96,8 +96,10 @@ class GitService:
                                     a_lines = a_blob.split('\n')
                                     b_lines = b_blob.split('\n')
                                     
-                                    diff_text += f"First 20 lines of original file:\n{a_blob.split('\n')[:20]}\n"
-                                    diff_text += f"First 20 lines of modified file:\n{b_blob.split('\n')[:20]}\n"
+                                    a_lines_preview = a_blob.split('\n')[:20]
+                                    b_lines_preview = b_blob.split('\n')[:20]
+                                    diff_text += "First 20 lines of original file:\n" + str(a_lines_preview) + "\n"
+                                    diff_text += "First 20 lines of modified file:\n" + str(b_lines_preview) + "\n"
                                 else:
                                     diff_text = f"--- {diff_item.a_path}\n+++ {diff_item.b_path}\n"
                             
@@ -138,9 +140,10 @@ class GitService:
                             if not (added_lines or deleted_lines) and diff_item.b_blob:
                                 diff_summary += "\nFile content (first 20 lines):\n```\n"
                                 content = diff_item.b_blob.data_stream.read().decode('utf-8', errors='replace')
-                                content_lines = content.split('\n')[:20]
+                                content_lines_all = content.split('\n')
+                                content_lines = content_lines_all[:20]
                                 diff_summary += "\n".join(content_lines)
-                                if len(content.split('\n')) > 20:
+                                if len(content_lines_all) > 20:
                                     diff_summary += "\n... (more lines omitted)"
                                 diff_summary += "\n```\n"
                                 
@@ -150,9 +153,10 @@ class GitService:
                                 diff_summary += "\nFile content (first 20 lines):\n```\n"
                                 try:
                                     content = diff_item.b_blob.data_stream.read().decode('utf-8', errors='replace')
-                                    content_lines = content.split('\n')[:20]
+                                    content_lines_all = content.split('\n')
+                                    content_lines = content_lines_all[:20]
                                     diff_summary += "\n".join(content_lines)
-                                    if len(content.split('\n')) > 20:
+                                    if len(content_lines_all) > 20:
                                         diff_summary += "\n... (more lines omitted)"
                                 except Exception as content_e:
                                     diff_summary += f"Error reading file content: {str(content_e)}"
@@ -164,9 +168,10 @@ class GitService:
                         try:
                             content = diff_item.a_blob.data_stream.read().decode('utf-8', errors='replace')
                             diff_summary += "Content summary (first 10 lines):\n```\n"
-                            content_lines = content.split('\n')[:10]
+                            content_lines_all = content.split('\n')
+                            content_lines = content_lines_all[:10]
                             diff_summary += "\n".join(content_lines)
-                            if len(content.split('\n')) > 10:
+                            if len(content_lines_all) > 10:
                                 diff_summary += "\n... (more lines omitted)"
                         except Exception as content_e:
                             diff_summary += f"Error reading file content: {str(content_e)}"
